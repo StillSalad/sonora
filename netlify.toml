@@ -1,0 +1,9 @@
+# Frontend SONORA su Netlify. Variabile obbligatoria nel sito Netlify:
+#   SONORA_API_ORIGIN = https://<nome-servizio>.onrender.com
+[build]
+  base = "frontend"
+  command = "npm run build && node scripts/netlify-files.mjs"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "20"

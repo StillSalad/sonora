@@ -1,0 +1,16 @@
+# Database locale per lo sviluppo. Avvio: docker compose up -d db
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: sonora
+      POSTGRES_PASSWORD: sonora
+      POSTGRES_DB: sonora
+    ports: ["5432:5432"]
+    volumes: ["sonora_pg:/var/lib/postgresql/data"]
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+    profiles: ["redis"]
+volumes:
+  sonora_pg:
