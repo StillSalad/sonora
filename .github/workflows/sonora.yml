@@ -1,0 +1,36 @@
+name: SONORA
+on:
+  push:
+    paths: ["*.zip"]
+  schedule:
+    - cron: "0 5 * * *"
+  workflow_dispatch: {}
+permissions:
+  contents: write
+jobs:
+  estrai-zip:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Estrai lo zip nel repository
+        run: |
+          for z in *.zip; do
+            unzip -o -q "$z" -x ".github/*"
+            git rm -q "$z"
+          done
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Estrae il progetto dallo zip" || echo "Niente da estrarre"
+          git push
+  aggiorna-catalogo:
+    if: github.event_name != 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Sveglia il server e aggiorna il catalogo
+        run: |
+          curl --fail --silent --show-error --retry 6 --retry-delay 20 --retry-all-errors --max-time 120 \
+            -X POST "${{ secrets.SONORA_API_URL }}/api/v1/internal/ingest" \
+            -H "Authorization: Bearer ${{ secrets.SONORA_INGEST_TOKEN }}" \
+            -H "X-Sonora-Client: web"
