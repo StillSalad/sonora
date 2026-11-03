@@ -4,7 +4,7 @@ services:
     name: sonora-api
     runtime: python
     plan: free
-        region: frankfurt
+    region: frankfurt
     rootDir: backend
     buildCommand: pip install -r requirements.txt
     startCommand: alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips "*"
