@@ -26,3 +26,19 @@ def test_internal_ingest_hidden_without_token_and_protected(client, monkeypatch)
     monkeypatch.setattr(background, "start", lambda chart_only=False: calls.append(chart_only) or True)
     r = client.post("/api/v1/internal/ingest?chart_only=true", headers={**H, "Authorization": "Bearer segreto-lungo"})
     assert r.status_code == 202 and r.json()["started"] is True and calls == [True]
+
+
+def test_stale_when_configured_charts_missing(client, monkeypatch):
+    from app.catalog.ingest import apply_charts, ingest_track
+    from app.db import SessionLocal
+    from app.providers.base import ChartEntry
+    from factories import ext
+    assert background.catalog_is_stale()  # catalogo vuoto
+    with SessionLocal() as db:
+        t = ingest_track(db, ext(1))
+        apply_charts(db, {"1001": t}, [ChartEntry("itunes", "apple_music_most_played", "it", 1, "1001", "", "")], home="it")
+        db.commit()
+    monkeypatch.setattr(get_settings(), "chart_countries", "it")
+    assert not background.catalog_is_stale()  # aggiornato ora, classifiche complete
+    monkeypatch.setattr(get_settings(), "chart_countries", "it,us")
+    assert background.catalog_is_stale()  # manca la classifica USA: va reimportato

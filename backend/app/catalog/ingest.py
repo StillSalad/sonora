@@ -146,28 +146,39 @@ def ingest_track(db: Session, ext: ExternalTrack) -> Track:
     return track
 
 
-def apply_chart(db: Session, tracks_by_ext: dict[str, Track], chart: list[ChartEntry]) -> None:
-    """Segna come 'popular' le tracce in classifica e azzera chi ne è uscito.
-    Il punteggio decresce con la posizione; la fonte e la data restano in popularity_sources."""
+def apply_charts(db: Session, tracks_by_ext: dict[str, Track], charts: list[ChartEntry], home: str = "it") -> None:
+    """Segna come 'popular' le tracce presenti in almeno una classifica e azzera chi è uscito da tutte.
+    Punteggio = posizione migliore; la classifica del paese dell'app pesa di più (1.0 contro 0.85).
+    Ogni classifica resta in popularity_sources con paese, posizione e data."""
     ts = now()
-    in_chart = set()
-    total = max(len(chart), 1)
-    for e in chart:
+    totals: dict[str, int] = {}
+    for e in charts:
+        totals[e.country] = max(totals.get(e.country, 0), e.rank)
+    per_track: dict = {}
+    for e in charts:
         t = tracks_by_ext.get(e.external_id)
-        if not t:
-            continue
-        in_chart.add(t.id)
+        if t:
+            per_track.setdefault(t.id, (t, []))[1].append(e)
+    for t, entries in per_track.values():
+        is_home = lambda e: e.country.lower() == home.lower()  # noqa: E731
+        score = max((1.0 if is_home(e) else 0.85) * (1 - (e.rank - 1) / max(totals[e.country], 1) * 0.5) for e in entries)
         t.popularity_class = PopularityClass.popular
-        t.popularity_score = round(1 - (e.rank - 1) / total * 0.5, 4)
+        t.popularity_score = round(score, 4)
         t.popularity_confidence = 0.9
-        t.popularity_sources = [{"source": e.chart, "provider": e.provider, "country": e.country.upper(),
-                                 "rank": e.rank, "feed_updated": e.updated, "fetched_at": ts.isoformat()}]
+        t.popularity_sources = [{"source": e.chart, "provider": e.provider, "country": e.country.upper(), "home": is_home(e),
+                                 "rank": e.rank, "feed_updated": e.updated, "fetched_at": ts.isoformat()}
+                                for e in sorted(entries, key=lambda e: (not is_home(e), e.rank))]
         t.popularity_updated_at = ts
     for t in db.scalars(select(Track).where(Track.popularity_class == PopularityClass.popular)):
-        if t.id not in in_chart:
+        if t.id not in per_track:
             t.popularity_class = PopularityClass.unknown
             t.popularity_score = None
             t.popularity_confidence = None
-            t.popularity_sources = [{"source": "apple_music_most_played", "note": "uscito dalla classifica",
+            t.popularity_sources = [{"source": "apple_music_most_played", "note": "uscito dalle classifiche",
                                      "fetched_at": ts.isoformat()}]
             t.popularity_updated_at = ts
+
+
+def apply_chart(db: Session, tracks_by_ext: dict[str, Track], chart: list[ChartEntry]) -> None:
+    """Compatibilità: una sola classifica, considerata quella di casa."""
+    apply_charts(db, tracks_by_ext, chart, home=chart[0].country if chart else "it")

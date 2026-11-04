@@ -3,7 +3,7 @@
 Schema fisso: in ogni blocco di 5 posizioni la quinta è "discovery". Così qualunque finestra
 mobile di 50 brani contiene 40 popolari e 10 scoperte. Se un bacino è vuoto si usa l'altro
 e lo si dichiara (tolleranza). Nessun brano si ripete nella sessione; lo stesso artista non
-torna nelle 3 posizioni successive e lo stesso genere non più di 2 volte di fila, con
+torna nelle 6 posizioni successive e lo stesso genere non più di 2 volte di fila, con
 allentamento progressivo solo se non ci sono alternative.
 """
 import hashlib
@@ -11,6 +11,7 @@ from dataclasses import dataclass, field
 
 WINDOW = 50
 DISCOVERY_EVERY = 5  # 1 ogni 5 = 20%
+ARTIST_GAP = 6       # lo stesso artista non torna prima di 6 brani
 
 
 def slot_for(position: int) -> str:
@@ -25,16 +26,22 @@ class Candidate:
     pool: str              # popular | discovery
     base: float            # popolarità o qualità del candidato
     affinity: float = 0.0  # gusti dell'utente
+    penalty: float = 0.0   # già ascoltato di recente in altre sessioni
     reasons: list[str] = field(default_factory=list)
 
 
-def _jitter(session: str, track_id: str) -> float:
+def _unit(session: str, track_id: str) -> float:
     h = hashlib.sha256(f"{session}:{track_id}".encode()).digest()
-    return int.from_bytes(h[:4], "big") / 2**32 * 0.15  # piccola variazione stabile per sessione
+    return (int.from_bytes(h[:6], "big") + 1) / (2**48 + 2)  # in (0, 1), stabile per sessione
 
 
 def rank(cands: list[Candidate], session: str) -> list[Candidate]:
-    return sorted(cands, key=lambda c: c.base + c.affinity + _jitter(session, c.track_id), reverse=True)
+    """Ordine casuale pesato (Efraimidis-Spirakis): chi ha punteggio più alto tende a uscire prima,
+    ma ogni sessione produce un ordine diverso. Così le prime schede non sono sempre le stesse."""
+    def key(c: Candidate) -> float:
+        w = max(0.02, c.base + c.affinity - c.penalty)
+        return _unit(session, c.track_id) ** (1 / w)
+    return sorted(cands, key=key, reverse=True)
 
 
 def _ok(c: Candidate, recent: list[Candidate], artist_gap: int, genre_run: int) -> bool:
@@ -49,7 +56,7 @@ def _ok(c: Candidate, recent: list[Candidate], artist_gap: int, genre_run: int) 
 
 def pick(pool: list[Candidate], recent: list[Candidate]) -> Candidate | None:
     # si allenta prima il vincolo sul genere, poi quello sull'artista
-    for artist_gap, genre_run in ((3, 2), (3, 0), (1, 0), (0, 0)):
+    for artist_gap, genre_run in ((ARTIST_GAP, 2), (ARTIST_GAP, 0), (3, 0), (1, 0), (0, 0)):
         for c in pool:
             if _ok(c, recent, artist_gap, genre_run):
                 return c

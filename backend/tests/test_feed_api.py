@@ -104,3 +104,40 @@ def test_likes_and_taste_explanation(client):
     assert any(r.startswith("Perché ti piace il genere") for r in reasons)
     assert client.request("DELETE", f"/api/v1/tracks/{tid}/like", headers=H).status_code == 204
     assert client.get("/api/v1/me/likes").json()["items"] == []
+
+
+DEV = {"X-Sonora-Device": "dispositivo-di-prova-0001"}
+
+
+def first_page(client, headers=None, n=10):
+    return [it["track"]["id"] for it in client.get("/api/v1/feed", params={"limit": n}, headers=headers or {}).json()["items"]]
+
+
+def test_reopening_app_does_not_repeat_recent_songs(client):
+    seed(120, 40)  # catalogo ampio: 120 popolari, 40 scoperte
+    seen = []
+    for _ in range(4):  # quattro aperture dell'app, ognuna una sessione nuova
+        seen += first_page(client, DEV)
+    assert len(seen) == 40 and len(set(seen)) == 40  # nessuna ripetizione tra un'apertura e l'altra
+    other = first_page(client, {"X-Sonora-Device": "altro-dispositivo-0002"})
+    assert len(other) == 10  # un altro dispositivo non è influenzato
+
+
+def test_small_catalog_still_fills_feed_with_penalized_repeats(client):
+    seed(8, 3)
+    a = first_page(client, DEV, n=10)
+    b = first_page(client, DEV, n=10)
+    assert len(a) == len(b) == 10  # con pochi brani si ripetono, ma il feed non si svuota
+
+
+def test_history_follows_account_across_devices(client):
+    seed(120, 40)
+    register(client)
+    a = first_page(client, {"X-Sonora-Device": "telefono-0000000001"})
+    b = first_page(client, {"X-Sonora-Device": "computer-0000000002"})
+    assert not set(a) & set(b)
+
+
+def test_invalid_device_header_is_ignored(client):
+    seed(10, 3)
+    assert client.get("/api/v1/feed", headers={"X-Sonora-Device": "<script>"}).status_code == 200

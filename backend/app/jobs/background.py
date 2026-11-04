@@ -1,7 +1,7 @@
 """Import del catalogo in un thread del server web (piano gratuito: niente worker separati)."""
 import logging
 import threading
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import httpx
 from sqlalchemy import func, select
@@ -9,7 +9,7 @@ from sqlalchemy import func, select
 from ..catalog.genres import DISCOVERY_TERMS
 from ..config import get_settings
 from ..db import SessionLocal
-from ..models import Provider, ProviderTrack
+from ..models import PopularityClass, Provider, ProviderTrack, Track
 from ..providers.itunes import ItunesAdapter
 from .ingest import run
 
@@ -45,3 +45,19 @@ def catalog_is_empty() -> bool:
         n = db.scalar(select(func.count(ProviderTrack.id)).join(Provider, Provider.id == ProviderTrack.provider_id)
                       .where(Provider.name == "itunes"))
         return not n
+
+
+def catalog_is_stale(hours: float = 20) -> bool:
+    """Vero se le classifiche non vengono aggiornate da più di `hours` ore (o mai), oppure se manca
+    una delle classifiche configurate in CHART_COUNTRIES (per esempio dopo averne aggiunte)."""
+    wanted = {c.strip().upper() for c in get_settings().chart_countries.split(",") if c.strip()}
+    with SessionLocal() as db:
+        last = db.scalar(select(func.max(Track.popularity_updated_at)))
+        sources = db.scalars(select(Track.popularity_sources).where(Track.popularity_class == PopularityClass.popular)).all()
+    if last is None:
+        return True
+    present = {str(x.get("country", "")).upper() for src in sources for x in (src or []) if x.get("rank")}
+    if wanted - present:
+        return True
+    last = last if last.tzinfo else last.replace(tzinfo=timezone.utc)
+    return datetime.now(timezone.utc) - last > timedelta(hours=hours)

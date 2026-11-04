@@ -18,8 +18,10 @@ Checklist tecnica, non parere legale. Rileggere i termini aggiornati prima di un
 ## Apple — classifiche Marketing Tools (attivo, segnale di popolarità)
 - `https://rss.marketingtools.apple.com/api/v2/{paese}/music/most-played/100/songs.json` (con ripiego sul vecchio host
   `rss.applemarketingtools.com`). Nessuna chiave.
-- Uso: la posizione in classifica diventa `popularity_class = popular`, con rango, paese e data in `popularity_sources`.
-  Chi esce dalla classifica torna `unknown`. Confermare che questo uso rientri nei termini Marketing Tools.
+- Uso: classifiche di più paesi (`CHART_COUNTRIES`, predefinito Italia, Stati Uniti, Regno Unito, Spagna, Francia, Germania).
+  Ogni brano in almeno una classifica diventa `popularity_class = popular`; tutte le posizioni restano in `popularity_sources`.
+  La classifica del paese dell'app pesa di più (1.0 contro 0.85). I brani esteri vengono cercati sullo store italiano:
+  se lì non esistono vengono scartati. Chi esce da tutte le classifiche torna `unknown`. Confermare che questo uso rientri nei termini Marketing Tools.
 
 ## MusicBrainz (pronto, disattivato di default)
 - Solo metadati: cerca l'ISRC di un brano. Accettato solo con corrispondenza univoca (punteggio 100, durata entro 2 s, un solo ISRC).

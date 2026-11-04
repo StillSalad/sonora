@@ -1,6 +1,6 @@
 from sqlalchemy import func, select
 
-from app.catalog.ingest import apply_chart, ingest_track
+from app.catalog.ingest import apply_chart, apply_charts, ingest_track
 from app.db import SessionLocal
 from app.models import DuplicateCandidate, PopularityClass, Preview, PreviewStatus, Tag, Track, TrackTag
 from app.providers.base import ChartEntry
@@ -56,3 +56,17 @@ def test_chart_sets_and_clears_popularity(client):
         apply_chart(db, {"1001": t1}, [ChartEntry("itunes", "apple_music_most_played", "it", 1, "1001", "", "")])
         db.commit()
         assert t2.popularity_class == PopularityClass.unknown and t2.popularity_score is None
+
+
+
+def test_multi_country_charts_prefer_home_country(client):
+    with SessionLocal() as db:
+        t1 = ingest_track(db, ext(1)); t2 = ingest_track(db, ext(2)); t3 = ingest_track(db, ext(3))
+        E = lambda c, r, i: ChartEntry("itunes", "apple_music_most_played", c, r, str(1000 + i), "", "")
+        apply_charts(db, {"1001": t1, "1002": t2, "1003": t3},
+                     [E("it", 5, 1), E("us", 1, 1), E("us", 1, 2), E("it", 1, 3)], home="it")
+        db.commit()
+        assert all(t.popularity_class == PopularityClass.popular for t in (t1, t2, t3))
+        assert t1.popularity_sources[0]["country"] == "IT" and t1.popularity_sources[0]["home"] is True
+        assert len(t1.popularity_sources) == 2
+        assert t3.popularity_score > t2.popularity_score  # n.1 in Italia batte n.1 all'estero

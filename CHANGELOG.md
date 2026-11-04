@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.4.0 — Feed più vario (2026-11-03)
+### Corretto (segnalazione: "si ripetono spesso le canzoni")
+- Memoria tra sessioni: i brani mostrati negli ultimi 3 giorni non tornano finché c'è altra musica; dal 4° al 14° giorno sono solo penalizzati. Vale per dispositivo (identificativo casuale) e per account.
+- Ordine casuale pesato per sessione al posto di un ordine quasi fisso: la prima canzone cambia a ogni apertura.
+- Brani popolari da 6 classifiche (Italia, Stati Uniti, Regno Unito, Spagna, Francia, Germania) invece della sola italiana.
+- Scoperte pescate a caso da tutto il catalogo, non sempre dagli stessi ~300 brani.
+- Lo stesso artista non torna prima di 6 brani (prima 3).
+- Il server reimporta da solo all'avvio se le classifiche hanno più di 20 ore o ne manca una configurata.
+
+### Misurato
+Simulazione di 7 aperture × 20 brani: prima 52 brani diversi su 140 (88 ripetizioni), ora 140 su 140 (0 ripetizioni); primo brano diverso 7 volte su 7 (prima 4).
+
 ## 0.3.1 — Pubblicazione online (2026-11-02)
 ### Aggiunto
 - Configurazioni pronte: `render.yaml` (server), `netlify.toml` + `scripts/netlify-files.mjs` (app con proxy `/api` sullo stesso dominio), workflow GitHub per l'aggiornamento giornaliero.

@@ -17,6 +17,7 @@ class Settings(BaseSettings):
 
     # Catalogo
     store_country: str = "it"          # storefront Apple e territorio delle anteprime
+    chart_countries: str = "it,us,gb,es,fr,de"  # classifiche usate come segnale "popolare" (la prima conta di più)
     itunes_enabled: bool = True        # iTunes Search API: nessuna chiave, uso promozionale
     live_search: bool = True           # se il catalogo locale ha pochi risultati, chiede a iTunes
     musicbrainz_contact: str = ""      # email/URL per lo User-Agent; vuoto = MusicBrainz disattivato
@@ -25,7 +26,7 @@ class Settings(BaseSettings):
     # Produzione
     trust_proxy: bool = False          # true dietro Netlify/Render: l'IP reale arriva in X-Forwarded-For
     ingest_token: str = ""             # abilita POST /internal/ingest (job giornaliero da GitHub Actions)
-    ingest_on_start: bool = False      # al primo avvio con catalogo vuoto importa da solo la classifica
+    ingest_on_start: bool = False      # all'avvio importa da solo se il catalogo è vuoto o vecchio di oltre 20 ore
 
     @field_validator("database_url")
     @classmethod

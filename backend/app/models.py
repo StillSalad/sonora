@@ -361,10 +361,14 @@ class DuplicateCandidate(Base):
 class FeedImpression(Base):
     """Brani già mostrati in una sessione di feed: niente ripetizioni e finestra 80/20 verificabile."""
     __tablename__ = "feed_impressions"
-    __table_args__ = (UniqueConstraint("session_id", "track_id"), Index("ix_impressions_session_pos", "session_id", "position"))
+    __table_args__ = (UniqueConstraint("session_id", "track_id"), Index("ix_impressions_session_pos", "session_id", "position"),
+                      Index("ix_impressions_user_time", "user_id", "created_at"),
+                      Index("ix_impressions_device_time", "device_id", "created_at"))
     id: Mapped[uuid.UUID] = pk()
     session_id: Mapped[str] = mapped_column(String(64))
     user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    # identificativo casuale del dispositivo (generato dall'app, nessun dato personale): memoria tra sessioni
+    device_id: Mapped[str | None] = mapped_column(String(64))
     track_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("tracks.id", ondelete="CASCADE"))
     position: Mapped[int] = mapped_column(Integer)
     slot: Mapped[str] = mapped_column(String(16))  # popular | discovery

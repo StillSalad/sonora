@@ -6,6 +6,23 @@ export class ApiError extends Error {
   }
 }
 
+/** Identificativo casuale del dispositivo (nessun dato personale): il feed lo usa per non
+ *  riproporre i brani già visti nelle sessioni precedenti, anche senza account. */
+function deviceId(): string | null {
+  try {
+    let id = localStorage.getItem("sonora-device");
+    if (!id) {
+      id = typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? crypto.randomUUID()
+        : Array.from({ length: 32 }, () => Math.floor(Math.random() * 16).toString(16)).join("");
+      localStorage.setItem("sonora-device", id);
+    }
+    return id;
+  } catch {
+    return null;
+  }
+}
+
 export async function api<T>(path: string, init: RequestInit & { json?: unknown } = {}): Promise<T> {
   const { json, headers, ...rest } = init;
   let res: Response;
@@ -15,6 +32,7 @@ export async function api<T>(path: string, init: RequestInit & { json?: unknown 
       ...rest,
       headers: {
         "X-Sonora-Client": "web",
+        ...(path.startsWith("/feed") && deviceId() ? { "X-Sonora-Device": deviceId()! } : {}),
         ...(json !== undefined ? { "Content-Type": "application/json" } : {}),
         ...headers,
       },

@@ -9,8 +9,12 @@ from factories import ext
 
 class FakeApple:
     name = "itunes"
-    def chart(self, limit):
-        return [ChartEntry("itunes", "apple_music_most_played", "it", i + 1, str(1000 + i), "", "") for i in range(5)]
+    def chart(self, limit, country=None):
+        if country == "de":
+            raise ProviderUnavailable("giù")
+        n = 5 if country == "it" else 3  # le classifiche estere si sovrappongono a quella italiana
+        return [ChartEntry("itunes", "apple_music_most_played", country, i + 1, str(1000 + i + (0 if country == "it" else 2)), "", "")
+                for i in range(n)]
     def lookup_tracks(self, ids):
         return [ext(int(i) - 1000) for i in ids]
     def search_tracks(self, term, limit=25):
@@ -20,8 +24,9 @@ class FakeApple:
 
 
 def test_ingest_job(client):
-    stats = run(FakeApple(), ["rap", "jazz"], 3, chart_only=False)
-    assert stats["chart"] == 5 and stats["genre_tracks"] == 3 and stats["errors"] == ["jazz: limite"]
+    stats = run(FakeApple(), ["rap", "jazz"], 3, chart_only=False, countries=["it", "us", "de"], home="it")
+    assert stats["chart"] == 5 and stats["genre_tracks"] == 3
+    assert stats["countries"] == {"it": 5, "us": 3} and stats["errors"] == ["classifica de: giù", "jazz: limite"]
     with SessionLocal() as db:
         assert db.scalar(select(func.count()).select_from(Track)) == 8
         assert db.scalar(select(func.count()).select_from(Track).where(Track.popularity_class == PopularityClass.popular)) == 5

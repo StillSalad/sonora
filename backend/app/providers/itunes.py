@@ -85,16 +85,17 @@ class ItunesAdapter:
             out += [t for t in (self._track(d) for d in data.get("results", [])) if t]
         return out
 
-    def chart(self, limit: int = 100) -> list[ChartEntry]:
+    def chart(self, limit: int = 100, country: str | None = None) -> list[ChartEntry]:
+        country = (country or self.country).lower()
         last: Exception | None = None
         for base in self.charts_bases:
             try:
-                data = self._get(f"{base}/api/v2/{self.country}/music/most-played/{min(limit, 100)}/songs.json")
+                data = self._get(f"{base}/api/v2/{country}/music/most-played/{min(limit, 100)}/songs.json")
             except ProviderUnavailable as e:
                 last = e
                 continue
             feed = data.get("feed", {})
-            return [ChartEntry(provider=PROVIDER, chart="apple_music_most_played", country=self.country, rank=i + 1,
+            return [ChartEntry(provider=PROVIDER, chart="apple_music_most_played", country=country, rank=i + 1,
                                external_id=str(r["id"]), title=r.get("name", ""), artist_name=r.get("artistName", ""),
                                updated=feed.get("updated"))
                     for i, r in enumerate(feed.get("results", [])) if r.get("id")]

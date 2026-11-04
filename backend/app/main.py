@@ -15,8 +15,10 @@ API = "/api/v1"
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     s = get_settings()
-    # primo avvio online: se il catalogo è vuoto lo riempie da solo (in un thread, il server risponde subito)
-    if s.ingest_on_start and s.itunes_enabled and background.catalog_is_empty():
+    # all'avvio: se il catalogo è vuoto o le classifiche hanno più di 20 ore, lo aggiorna da solo
+    # in un thread (il server risponde subito). Sul piano gratuito il server riparte spesso: così il
+    # catalogo resta fresco anche senza l'automazione giornaliera di GitHub.
+    if s.ingest_on_start and s.itunes_enabled and (background.catalog_is_empty() or background.catalog_is_stale()):
         background.start(chart_only=False)
     yield
 
@@ -30,7 +32,7 @@ def create_app() -> FastAPI:
     app.add_middleware(CsrfGuard)
     app.add_middleware(CORSMiddleware, allow_origins=[s.frontend_origin], allow_credentials=True,
                        allow_methods=["GET", "POST", "PATCH", "DELETE"],
-                       allow_headers=["content-type", "x-sonora-client", "x-request-id"])
+                       allow_headers=["content-type", "x-sonora-client", "x-sonora-device", "x-request-id"])
     app.add_middleware(RequestContext)
     app.include_router(system.router, prefix=API)
     app.include_router(auth.router, prefix=API)

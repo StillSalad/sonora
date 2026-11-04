@@ -24,6 +24,8 @@ services:
         sync: false          # es. https://sonora-lollo.netlify.app
       - key: STORE_COUNTRY
         value: it
+      - key: CHART_COUNTRIES
+        value: it,us,gb,es,fr,de
       - key: TRUST_PROXY
         value: "true"
       - key: INGEST_ON_START

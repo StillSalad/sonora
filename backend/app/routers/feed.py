@@ -1,6 +1,8 @@
 import uuid
 
-from fastapi import APIRouter, Depends, Query
+import re
+
+from fastapi import APIRouter, Depends, Header, Query
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -14,6 +16,7 @@ from ..models import ListeningEvent, Track, User
 from ..security import current_user_optional
 
 router = APIRouter(prefix="/feed", tags=["feed"])
+DEVICE_RE = re.compile(r"^[A-Za-z0-9-]{16,64}$")
 
 EVENT_TYPES = {"preview_start", "preview_progress", "preview_complete", "skip", "like", "unlike", "save", "unsave",
                "external_open", "search_click", "share"}
@@ -22,11 +25,13 @@ EVENT_TYPES = {"preview_start", "preview_progress", "preview_complete", "skip", 
 @router.get("")
 def feed(surface: str = Query("for_you", pattern="^for_you$"), cursor: str | None = None,
          limit: int = Query(10, ge=1, le=25), db: Session = Depends(get_db),
-         user: User | None = Depends(current_user_optional)):
+         user: User | None = Depends(current_user_optional),
+         x_sonora_device: str | None = Header(None, max_length=64)):
     session = decode_cursor(cursor)
     if cursor and not session:
         raise ApiError(400, "invalid_cursor", "Cursore non valido.")
-    return build_page(db, session, user, limit, get_settings().store_country)
+    device = x_sonora_device if x_sonora_device and DEVICE_RE.match(x_sonora_device) else None
+    return build_page(db, session, user, limit, get_settings().store_country, device)
 
 
 class EventIn(BaseModel):

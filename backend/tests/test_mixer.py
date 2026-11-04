@@ -36,7 +36,15 @@ def test_genre_not_more_than_two_in_a_row_when_alternatives_exist():
     assert all(not (g[i] == g[i - 1] == g[i - 2]) for i in range(2, len(g)))
 
 
-def test_affinity_moves_candidates_up():
+def test_affinity_and_penalty_shift_odds_but_keep_variety():
     a = Candidate("a", "x", ("pop",), "popular", 0.5)
     b = Candidate("b", "y", ("rap",), "popular", 0.5, affinity=0.4)
-    assert mix([a, b], [], 0, 1, [], "s")[0].candidate.track_id == "b"
+    c = Candidate("c", "z", ("rock",), "popular", 0.5, penalty=0.45)
+    firsts = [mix([a, b, c], [], 0, 1, [], f"s{i}")[0].candidate.track_id for i in range(600)]
+    assert firsts.count("b") > firsts.count("a") > firsts.count("c") > 0
+
+
+def test_first_card_changes_between_sessions():
+    pops = pool(100, "popular", artists=40)
+    firsts = {mix(pops, [], 0, 1, [], f"sessione-{i}")[0].candidate.track_id for i in range(30)}
+    assert len(firsts) >= 10  # prima: sempre lo stesso brano in cima
