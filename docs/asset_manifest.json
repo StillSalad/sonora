@@ -1,6 +1,6 @@
 {
   "project": "SONORA",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "generated": "2026-11-02",
   "palette": {
     "background": "#0B0D14",
@@ -16,7 +16,7 @@
     "Nessun testo incorporato nelle illustrazioni",
     "Copertine di brani/album/artisti: solo dai provider autorizzati, mai generate o sostituite"
   ],
-  "count": 78,
+  "count": 81,
   "assets": [
     {
       "filename": "sonora_app_icon.png",
@@ -615,6 +615,17 @@
       "usage": "Pagina/collegamento artista — colore via CSS currentColor, griglia 24, tratto 1.75"
     },
     {
+      "filename": "icon_check.svg",
+      "path": "icons/icon_check.svg",
+      "group": "icons",
+      "width": 24,
+      "height": 24,
+      "format": "SVG",
+      "transparent": true,
+      "bytes": 244,
+      "usage": "Selezionato — colore via CSS currentColor, griglia 24, tratto 1.75"
+    },
+    {
       "filename": "icon_chevron_left.svg",
       "path": "icons/icon_chevron_left.svg",
       "group": "icons",
@@ -624,6 +635,17 @@
       "transparent": true,
       "bytes": 236,
       "usage": "Indietro — colore via CSS currentColor, griglia 24, tratto 1.75"
+    },
+    {
+      "filename": "icon_close.svg",
+      "path": "icons/icon_close.svg",
+      "group": "icons",
+      "width": 24,
+      "height": 24,
+      "format": "SVG",
+      "transparent": true,
+      "bytes": 242,
+      "usage": "Chiudi — colore via CSS currentColor, griglia 24, tratto 1.75"
     },
     {
       "filename": "icon_collections.svg",
@@ -767,6 +789,17 @@
       "transparent": true,
       "bytes": 267,
       "usage": "Passa al tema scuro — colore via CSS currentColor, griglia 24, tratto 1.75"
+    },
+    {
+      "filename": "icon_more.svg",
+      "path": "icons/icon_more.svg",
+      "group": "icons",
+      "width": 24,
+      "height": 24,
+      "format": "SVG",
+      "transparent": true,
+      "bytes": 372,
+      "usage": "Altre azioni (menu della scheda) — colore via CSS currentColor, griglia 24, tratto 1.75"
     },
     {
       "filename": "icon_music_dna.svg",

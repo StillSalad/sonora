@@ -17,7 +17,12 @@ FEATURES = {
     "previews": True,       # Milestone 3 (solo anteprime con diritto verificato)
     "likes": True,          # anticipato per il feed; raccolte complete in Milestone 5
     "genre_pages": True,    # generi dai tag dei provider
-    "tags": False,          # tag engine completo e mood: Milestone 4
+    "tags": True,           # generi dai provider + mood votati dalla community
+    "onboarding": True,     # scelta iniziale di generi e artisti
+    "feedback": True,       # "Non fa per me"
+    "daily": True,          # scoperta del giorno
+    "similar": True,        # "Altri brani così"
+    "mood_votes": True,     # "Che atmosfera ha?"
     "collections": False,   # Milestone 5
     "music_dna": False,     # Milestone 5
     "community": False,     # Milestone 6
@@ -36,4 +41,4 @@ def health(db: Session = Depends(get_db)):
 def meta():
     s = get_settings()
     return {"store_country": s.store_country.upper(), "demo_mode": s.demo_mode,"name": "SONORA", "version": __version__, "environment": s.app_env,
-            "milestone": 3, "features": FEATURES}
+            "milestone": 4, "features": FEATURES}

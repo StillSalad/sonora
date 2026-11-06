@@ -17,10 +17,11 @@ class Settings(BaseSettings):
 
     # Catalogo
     store_country: str = "it"          # storefront Apple e territorio delle anteprime
-    chart_countries: str = "it,us,gb,es,fr,de"  # classifiche usate come segnale "popolare" (la prima conta di più)
+    chart_countries: str = "it,us,gb,es,de"  # classifiche usate come segnale "popolare" (la prima conta di più)
     itunes_enabled: bool = True        # iTunes Search API: nessuna chiave, uso promozionale
     live_search: bool = True           # se il catalogo locale ha pochi risultati, chiede a iTunes
     musicbrainz_contact: str = ""      # email/URL per lo User-Agent; vuoto = MusicBrainz disattivato
+    mood_min_votes: int = 1            # voti minimi perché un mood compaia (la scheda mostra sempre quanti)
     demo_mode: bool = False            # mostra anche i brani demo fittizi (solo sviluppo)
 
     # Produzione

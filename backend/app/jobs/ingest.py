@@ -41,7 +41,7 @@ def run(adapter, genres: list[str], per_genre: int, chart_only: bool, chart_size
         # lookup sullo store di casa: chi non è disponibile in Italia non torna e viene scartato
         ids = list(dict.fromkeys(e.external_id for e in charts))
         by_ext = {ext.external_id: ingest_track(db, ext) for ext in adapter.lookup_tracks(ids)}
-        apply_charts(db, by_ext, charts, home=home)
+        apply_charts(db, by_ext, charts, home=home, configured=set(countries))
         db.commit()
         stats["chart"] = len(by_ext)
         log.info("classifiche %s: %s brani", ",".join(stats["countries"]), len(by_ext))

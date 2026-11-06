@@ -138,6 +138,8 @@ class Track(Base):
         Enum(PopularityClass, native_enum=False, length=16), default=PopularityClass.unknown)
     popularity_sources: Mapped[list] = mapped_column(JSONType, default=list)
     popularity_updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # se valorizzato la traccia non viene mostrata (es. "chart_removed": arrivata solo da una classifica tolta)
+    hidden_reason: Mapped[str | None] = mapped_column(String(64))
     created_at: Mapped[datetime] = created()
     updated_at: Mapped[datetime] = updated()
 
@@ -372,4 +374,31 @@ class FeedImpression(Base):
     track_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("tracks.id", ondelete="CASCADE"))
     position: Mapped[int] = mapped_column(Integer)
     slot: Mapped[str] = mapped_column(String(16))  # popular | discovery
+    created_at: Mapped[datetime] = created()
+
+
+# ---------- aggiunte 0.5: personalizzazione ----------
+class FeedFeedback(Base):
+    """'Non mi interessa', 'Meno brani così', 'Nascondi artista'. Per account o per dispositivo."""
+    __tablename__ = "feed_feedback"
+    __table_args__ = (Index("ix_feedback_user", "user_id"), Index("ix_feedback_device", "device_id"))
+    id: Mapped[uuid.UUID] = pk()
+    user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    device_id: Mapped[str | None] = mapped_column(String(64))
+    kind: Mapped[str] = mapped_column(String(32))  # not_interested | less_genre | hide_artist
+    track_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("tracks.id", ondelete="CASCADE"))
+    artist_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("artists.id", ondelete="CASCADE"))
+    genre_slug: Mapped[str | None] = mapped_column(String(64))
+    created_at: Mapped[datetime] = created()
+
+
+class MoodVote(Base):
+    """Voto della community sull'atmosfera di un brano. Diventa un tag mood (origine 'user')
+    quando raggiunge la soglia; la scheda mostra quanti voti lo sostengono."""
+    __tablename__ = "mood_votes"
+    __table_args__ = (UniqueConstraint("track_id", "user_id", "mood_slug"), Index("ix_mood_votes_track", "track_id"))
+    id: Mapped[uuid.UUID] = pk()
+    track_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("tracks.id", ondelete="CASCADE"))
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    mood_slug: Mapped[str] = mapped_column(String(64))
     created_at: Mapped[datetime] = created()

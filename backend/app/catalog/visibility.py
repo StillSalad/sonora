@@ -9,4 +9,5 @@ def visible_tracks_clause():
     cond = (ProviderTrack.track_id == Track.id) & (Provider.id == ProviderTrack.provider_id) & Provider.enabled.is_(True)
     if not get_settings().demo_mode:
         cond = cond & (Provider.name != "demo")
-    return exists(select(ProviderTrack.id).join(Provider, Provider.id == ProviderTrack.provider_id).where(cond))
+    return Track.hidden_reason.is_(None) & exists(
+        select(ProviderTrack.id).join(Provider, Provider.id == ProviderTrack.provider_id).where(cond))

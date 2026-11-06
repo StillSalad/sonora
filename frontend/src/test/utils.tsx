@@ -8,7 +8,7 @@ import { PlayerProvider } from "../context/PlayerContext";
 export const META = {
   name: "SONORA", version: "0.1.0", environment: "test", milestone: 1,
   store_country: "IT", demo_mode: false,
-  features: { auth: true, catalog: true, search: true, feed: true, previews: true, likes: true, genre_pages: true, tags: false, collections: false, music_dna: false, community: false, integrations: false, admin: false },
+  features: { auth: true, catalog: true, search: true, feed: true, previews: true, likes: true, genre_pages: true, tags: true, collections: false, music_dna: false, community: false, integrations: false, admin: false, onboarding: true, feedback: true, daily: true, similar: true, mood_votes: true },
 };
 export function track(i: number, over: Record<string, unknown> = {}) {
   return {

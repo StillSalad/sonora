@@ -12,7 +12,8 @@ from ..catalog.genres import GENRE_LABELS
 from ..catalog.visibility import visible_tracks_clause
 from ..models import (FeedImpression, Like, PopularityClass, Preview, PreviewStatus, Tag, Track, TrackArtist, TrackTag,
                       User)
-from .mixer import WINDOW, Candidate, mix
+from .mixer import WINDOW, Candidate, mix, rank
+from .personal import Negatives, Prefs
 
 COUNTRY_NAMES = {"IT": "Italia", "US": "Stati Uniti", "GB": "Regno Unito", "FR": "Francia", "DE": "Germania", "ES": "Spagna"}
 POOL_LIMIT = 600
@@ -88,9 +89,13 @@ def _best_chart(t: Track) -> dict:
     return sorted(srcs, key=lambda x: (not x.get("home", False), x["rank"]))[0]
 
 
-def _candidates(db: Session, exclude: set, user: User | None, history: dict, need: int) -> tuple[list[Candidate], list[Candidate]]:
-    pools = {"popular": _pool_rows(db, exclude, True), "discovery": _pool_rows(db, exclude, False)}
-    rows = pools["popular"] + pools["discovery"]
+def _candidates(db: Session, exclude: set, user: User | None, history: dict, need: int,
+                prefs: Prefs | None = None, neg: Negatives | None = None,
+                kinds: tuple[str, ...] = ("popular", "discovery")) -> tuple[list[Candidate], list[Candidate]]:
+    prefs, neg = prefs or Prefs(), neg or Negatives()
+    exclude = set(exclude) | neg.tracks
+    pools = {k: _pool_rows(db, exclude, k == "popular") for k in ("popular", "discovery") if k in kinds}
+    rows = [t for v in pools.values() for t in v]
     if not rows:
         return [], []
     ids = [t.id for t in rows]
@@ -106,13 +111,22 @@ def _candidates(db: Session, exclude: set, user: User | None, history: dict, nee
     top_genre_total = sum(liked_genres.values()) or 1
     out: dict[str, list[Candidate]] = {"popular": [], "discovery": []}
     for kind, pool_rows in pools.items():
+        pool_rows = [t for t in pool_rows if artist_of.get(t.id) not in neg.artists]
         fresh = [t for t in pool_rows if history.get(t.id, 1e9) >= HARD_HOURS]
         # se i brani mai sentiti di recente bastano, quelli degli ultimi 3 giorni restano fuori
         usable = fresh if len(fresh) >= need * MIN_POOL_FACTOR else pool_rows
         for t in usable:
             g = tuple(genres.get(t.id, []))
             aff, reasons = 0.0, []
-            if artist_of.get(t.id) in liked_artists:
+            art = artist_of.get(t.id)
+            if art in prefs.artists:
+                aff += 0.5
+                reasons.append(f"Perché hai scelto {prefs.artist_names.get(art, 'questo artista')}")
+            chosen = [x for x in g if x in prefs.genres]
+            if chosen:
+                aff += 0.45
+                reasons.append(f"Perché hai scelto {GENRE_LABELS.get(chosen[0], chosen[0])}")
+            if art in liked_artists:
                 aff += 0.35
                 reasons.append("Da un artista che hai apprezzato")
             best = max(g, key=lambda s: liked_genres.get(s, 0), default=None)
@@ -133,22 +147,22 @@ def _candidates(db: Session, exclude: set, user: User | None, history: dict, nee
                 base = 0.5
             base += 0.2 if t.id in playable else 0.0  # chi ha un'anteprima ascoltabile viene prima
             hours = history.get(t.id)
-            penalty = 0.0
+            penalty = min(0.75, 0.25 * max((neg.genres.get(x, 0) for x in g), default=0))
             if hours is not None:
                 days = hours / 24
-                penalty = 0.9 if hours < HARD_HOURS else 0.6 * max(0.0, 1 - days / HISTORY_DAYS)
+                penalty += 0.9 if hours < HARD_HOURS else 0.6 * max(0.0, 1 - days / HISTORY_DAYS)
             out[kind].append(Candidate(str(t.id), str(artist_of.get(t.id, t.id)), g, kind, base, aff, penalty, reasons))
     return out["popular"], out["discovery"]
 
 
 def build_page(db: Session, session: str | None, user: User | None, limit: int, country: str,
-               device: str | None = None) -> dict:
+               device: str | None = None, prefs: Prefs | None = None, neg: Negatives | None = None) -> dict:
     session = session or str(uuid.uuid4())
     seen = db.execute(select(FeedImpression).where(FeedImpression.session_id == session)
                       .order_by(FeedImpression.position)).scalars().all()
     exclude = {s.track_id for s in seen}
     history = _history(db, session, user, device)
-    pop, disc = _candidates(db, exclude, user, history, limit)
+    pop, disc = _candidates(db, exclude, user, history, limit, prefs, neg)
     # storia recente per diversità artista/genere
     recent_rows = seen[-6:]
     recent: list[Candidate] = []
@@ -176,3 +190,21 @@ def build_page(db: Session, session: str | None, user: User | None, limit: int, 
             "session_id": session, "exhausted": len(picked) < limit,
             "window": {"size": len(window), "popular": window.count("popular"),
                        "discovery": window.count("discovery"), "target": {"popular": 40, "discovery": 10, "of": WINDOW}}}
+
+
+def daily_pick(db: Session, day: str, user: User | None, device: str | None, country: str,
+               prefs: Prefs, neg: Negatives) -> dict | None:
+    """Scoperta del giorno: un brano fuori classifica con anteprima, scelto con i gusti della persona.
+    Stessa scelta per tutta la giornata (seme = giorno + persona)."""
+    who = str(user.id) if user else (device or "anonimo")
+    _, disc = _candidates(db, set(), user, {}, 1, prefs, neg, kinds=("discovery",))
+    playable = set(db.scalars(select(Preview.track_id).where(Preview.status == PreviewStatus.AVAILABLE,
+                                                             Preview.preview_url.is_not(None))).all())
+    pool = [c for c in disc if uuid.UUID(c.track_id) in playable] or disc
+    if not pool:
+        return None
+    c = rank(pool, f"daily:{day}:{who}")[0]
+    track = db.get(Track, uuid.UUID(c.track_id))
+    reasons = ["Scoperta del giorno, scelta per te"] + [r for r in c.reasons if not r.startswith("Scoperta")]
+    return {"position": -1, "slot": "daily", "tolerance": False, "explanation": reasons[0], "reasons": reasons,
+            "track": track_card(db, track, user, country)}

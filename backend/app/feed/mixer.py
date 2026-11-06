@@ -1,6 +1,7 @@
 """Mixer 80/20 deterministico e spiegabile (MASTER_PROMPT §B e §I).
 
-Schema fisso: in ogni blocco di 5 posizioni la quinta è "discovery". Così qualunque finestra
+Schema fisso: in ogni blocco di 5 posizioni la quinta è "discovery". Una posizione su due, quando
+esistono candidati compatibili, va a brani legati ai gusti espliciti o ai Mi piace (quota personale). Così qualunque finestra
 mobile di 50 brani contiene 40 popolari e 10 scoperte. Se un bacino è vuoto si usa l'altro
 e lo si dichiara (tolleranza). Nessun brano si ripete nella sessione; lo stesso artista non
 torna nelle 6 posizioni successive e lo stesso genere non più di 2 volte di fila, con
@@ -81,10 +82,17 @@ def mix(popular: list[Candidate], discovery: list[Candidate], start: int, count:
         pos = start + i
         planned = slot_for(pos)
         other = "discovery" if planned == "popular" else "popular"
-        c = pick(pools[planned], history)
+        def choose(pool: list[Candidate]) -> Candidate | None:
+            if pos % 2 == 0:  # quota personale: una posizione su due va ai gusti della persona, se possibile
+                personal = pick([x for x in pool if x.affinity > 0], history)
+                if personal:
+                    return personal
+            return pick(pool, history)
+
+        c = choose(pools[planned])
         used = planned
         if c is None:
-            c = pick(pools[other], history)
+            c = choose(pools[other])
             used = other
         if c is None:
             break

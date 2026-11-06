@@ -6,6 +6,8 @@ import { Icon } from "../components/Icon";
 import { InstallButton } from "../components/InstallButton";
 import { useApp } from "../context/AppContext";
 import { api, ApiError } from "../lib/api";
+import { usePrefs } from "../lib/prefs";
+import { GENRES } from "../lib/taxonomy";
 
 export default function Profile() {
   const { user, authLoading, setUser } = useApp();
@@ -54,8 +56,16 @@ export default function Profile() {
   );
 }
 
+function prefsSummary(p: ReturnType<typeof usePrefs>) {
+  if (!p.genres.length && !p.artists.length) return "Nessuna scelta: tocca per personalizzare il feed";
+  const g = p.genres.map((s) => GENRES.find((x) => x.slug === s)?.label ?? s);
+  return [g.slice(0, 3).join(", ") + (g.length > 3 ? ` e altri ${g.length - 3}` : ""),
+    p.artists.length ? `${p.artists.length} artist${p.artists.length === 1 ? "a" : "i"}` : ""].filter(Boolean).join(" · ");
+}
+
 function Settings() {
   const { theme, setTheme, meta } = useApp();
+  const prefs = usePrefs();
   return (
     <section aria-labelledby="settings" className="mt-8">
       <h2 id="settings" className="mb-2 text-lg font-semibold">Impostazioni</h2>
@@ -65,6 +75,13 @@ function Settings() {
           <Icon name={theme === "dark" ? "sun" : "moon"} className="text-secondary" />
           <span className="flex-1 font-medium">{theme === "dark" ? "Passa al tema chiaro" : "Passa al tema scuro"}</span>
         </button>
+        <Link to="/benvenuto?modifica=1" className="flex items-center gap-3 px-4 py-3 hover:bg-surface2">
+          <Icon name="music_dna" className="text-secondary" />
+          <span className="flex-1">
+            <span className="block font-medium">Generi e artisti preferiti</span>
+            <span className="block text-sm text-muted">{prefsSummary(prefs)}</span>
+          </span>
+        </Link>
         <InstallButton />
         <div className="flex items-start gap-3 px-4 py-3">
           <Icon name="link" className="mt-0.5 text-muted" />

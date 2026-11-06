@@ -34,9 +34,9 @@ describe("feed Per te", () => {
     const spy = mockApi(base((u) => (u.includes("/feed?") ? { status: 200, body: feedPage(0, 2, null) } : undefined)));
     renderAt("/");
     await userEvent.click(await screen.findByRole("button", { name: "Ascolta l’anteprima di Brano 0" }));
-    expect(playSpy).toHaveBeenCalledTimes(1);
-    const audio = playSpy.mock.contexts[0] as HTMLAudioElement;
-    expect(audio.src).toBe("https://audio.example/0.m4a");
+    const srcs = playSpy.mock.contexts.map((a) => (a as HTMLAudioElement).src);
+    expect(srcs).toContain("https://audio.example/0.m4a");
+    expect(srcs.filter((x) => x.startsWith("https://")).length).toBe(1);
     await waitFor(() => expect(spy.mock.calls.some(([u, i]) => String(u).endsWith("/feed/events") && String(i?.body).includes("preview_start"))).toBe(true));
   });
 
@@ -85,9 +85,16 @@ describe("ricerca e generi", () => {
     expect(await screen.findByText("Brano 2")).toBeInTheDocument();
   });
 
-  it("i mood non sono inventati", async () => {
-    mockApi(base(() => undefined));
+  it("i mood vuoti spiegano come si riempiono, senza inventarli", async () => {
+    mockApi(base((u) => (u.includes("/tags/sad/tracks") ? { status: 200, body: { tag: { slug: "sad" }, items: [], next_offset: null } } : undefined)));
     renderAt("/esplora/mood/sad");
-    expect(await screen.findByRole("heading", { name: "I mood arrivano presto" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Ancora nessun brano triste" })).toBeInTheDocument();
+  });
+
+  it("i mood votati compaiono nella pagina mood", async () => {
+    mockApi(base((u) => (u.includes("/tags/night/tracks?category=mood") ? { status: 200, body: { tag: { slug: "night" }, items: [track(3)], next_offset: null } } : undefined)));
+    renderAt("/esplora/mood/night");
+    expect(await screen.findByText("Brano 3")).toBeInTheDocument();
+    expect(screen.getByText("Atmosfera votata da chi ascolta su SONORA.")).toBeInTheDocument();
   });
 });

@@ -40,8 +40,18 @@ def test_affinity_and_penalty_shift_odds_but_keep_variety():
     a = Candidate("a", "x", ("pop",), "popular", 0.5)
     b = Candidate("b", "y", ("rap",), "popular", 0.5, affinity=0.4)
     c = Candidate("c", "z", ("rock",), "popular", 0.5, penalty=0.45)
-    firsts = [mix([a, b, c], [], 0, 1, [], f"s{i}")[0].candidate.track_id for i in range(600)]
+    # posizione dispari: nessuna quota personale, conta solo il sorteggio pesato
+    firsts = [mix([a, b, c], [], 1, 1, [], f"s{i}")[0].candidate.track_id for i in range(600)]
     assert firsts.count("b") > firsts.count("a") > firsts.count("c") > 0
+
+
+def test_personal_quota_every_other_position():
+    likes = [Candidate(f"l{i}", f"la{i}", ("jazz",), "popular", 0.5, affinity=0.4) for i in range(20)]
+    others = [Candidate(f"o{i}", f"oa{i}", ("pop",), "popular", 0.9) for i in range(80)]
+    out = mix(likes + others, [], 0, 20, [], "s")
+    even = [p for p in out if p.position % 2 == 0 and p.slot == "popular"]
+    assert all(p.candidate.affinity > 0 for p in even)
+    assert any(p.candidate.affinity == 0 for p in out)  # resta spazio per altro
 
 
 def test_first_card_changes_between_sessions():

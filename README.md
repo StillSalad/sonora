@@ -3,7 +3,10 @@
 PWA per scoprire musica: un feed verticale con 8 brani famosi e 2 da scoprire ogni 10, generi e mood da esplorare, raccolte e il tuo Music DNA.
 SONORA non è un servizio di streaming: mostrerà copertine, anteprime e link solo dove i provider lo consentono.
 
-**Stato: Milestone 3 completata.** Funzionano:
+**Stato: 0.5.0.** Funzionano:
+- scelta iniziale di generi e artisti, feed che segue i tuoi gusti e lo spiega;
+- gesti sulla copertina (tocco, doppio tocco, tieni premuto), "Non fa per me" con Annulla;
+- "Altri brani così", mood votati dalla community, scoperta del giorno, condivisione come storia;
 - feed Per te con brani veri da Apple Music, regola 80/20 e spiegazione di ogni proposta;
 - anteprime di 30 secondi solo dove il diritto è verificato, con link "Ascolta su Apple Music";
 - ricerca (catalogo locale + Apple quando mancano risultati), pagine dei 27 generi, pagine artista;
@@ -67,8 +70,8 @@ Poi in `backend/.env` metti `DATABASE_URL=postgresql+psycopg://sonora:sonora@loc
 
 ## Test
 ```bash
-cd backend && python -m pytest          # 44 test: account e sicurezza, provider, import, deduplicazione, mixer 80/20, feed, anteprime, ricerca
-cd frontend && npm test                 # 15 test: feed e player, anteprime non autorizzate, ricerca, generi, account
+cd backend && python -m pytest          # 64 test: account e sicurezza, provider, import, deduplicazione, mixer 80/20, feed, anteprime, ricerca
+cd frontend && npm test                 # 25 test: scelta iniziale, gesti, menu, feed e player, ricerca, mood, account
 cd frontend && npm run typecheck
 ```
 

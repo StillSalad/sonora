@@ -32,7 +32,7 @@ export async function api<T>(path: string, init: RequestInit & { json?: unknown 
       ...rest,
       headers: {
         "X-Sonora-Client": "web",
-        ...(path.startsWith("/feed") && deviceId() ? { "X-Sonora-Device": deviceId()! } : {}),
+        ...((path.startsWith("/feed") || path.includes("/similar")) && deviceId() ? { "X-Sonora-Device": deviceId()! } : {}),
         ...(json !== undefined ? { "Content-Type": "application/json" } : {}),
         ...headers,
       },
@@ -55,9 +55,13 @@ export type User = {
 };
 export type Features = Record<
   | "auth" | "catalog" | "search" | "feed" | "previews" | "likes" | "genre_pages" | "tags" | "collections"
-  | "music_dna" | "community" | "integrations" | "admin",
+  | "music_dna" | "community" | "integrations" | "admin"
+  | "onboarding" | "feedback" | "daily" | "similar" | "mood_votes",
   boolean
 >;
+export type MoodSummary = { voters: number; moods: { slug: string; label: string; votes: number; share: number }[]; mine: string[] };
+export type OnboardingArtist = { id: string; name: string; genre: string; genre_label: string; artwork_url: string | null };
+
 export type Meta = {
   name: string; version: string; environment: string; milestone: number; features: Features;
   store_country: string; demo_mode: boolean;
@@ -76,7 +80,7 @@ export type Track = {
   links: { provider: string; label: string; url: string }[];
   liked: boolean; demo: boolean;
 };
-export type FeedItem = { position: number; slot: "popular" | "discovery"; tolerance: boolean; explanation: string | null; reasons: string[]; track: Track };
+export type FeedItem = { position: number; slot: "popular" | "discovery" | "daily" | "similar"; tolerance: boolean; explanation: string | null; reasons: string[]; track: Track };
 export type FeedPage = {
   items: FeedItem[]; next_cursor: string | null; session_id: string; exhausted: boolean;
   window: { size: number; popular: number; discovery: number };

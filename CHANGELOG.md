@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.5.0 — Personalizzazione (2026-11-05)
+### Aggiunto
+- Scelta iniziale: almeno 3 generi, poi artisti di quei generi dal catalogo (con la copertina del loro brano più noto); si può saltare e modificare da Profilo. Salvata sul dispositivo e, con un account, sul server.
+- Quota personale nel feed: una posizione su due va ai gusti scelti o ai Mi piace, con spiegazione ("Perché hai scelto Jazz").
+- Gesti sulla copertina: tocco = play/pausa, doppio tocco = Mi piace con cuore animato, tieni premuto = menu. Pulsante ⋯ equivalente per chi non usa i gesti.
+- "Non fa per me": Non mi interessa, Meno brani di un genere, Nascondi artista, con Annulla. Per account o dispositivo.
+- Partenza istantanea: due lettori audio alternati, il brano successivo si precarica; copertine dei due successivi precaricate.
+- "Altri brani così": mini feed da un brano (stesso artista, stesso genere, stessa atmosfera).
+- "Che atmosfera ha?": voto della community su fino a 2 mood; le pagine mood si riempiono con i brani votati.
+- Condividi come storia: immagine 1080×1920 con copertina, titolo, artista e logo.
+- Scoperta del giorno in testa al feed alla prima apertura della giornata.
+- Icone: altre azioni, spunta, chiudi. Migrazione 0004.
+
+### Modificato
+- Tolta la classifica francese; i brani arrivati solo da lì vengono nascosti (salvo Mi piace).
+
+### Corretto durante la prova nel browser
+- Sul telefono la barra di navigazione copriva il pulsante "Avanti" della scelta iniziale: ora la scelta è a tutto schermo.
+- I menu dal basso finivano sotto la barra di navigazione (voci in fondo non toccabili): ora sono disegnati sopra tutta l'app.
+- La scoperta del giorno spariva se era anche tra i brani del feed: ora resta in cima e il doppione viene tolto; arriva insieme alla prima pagina, senza spostare i brani mentre si scorre.
+- "Ascolta su Apple Music" usciva dal bordo destro sui telefoni stretti.
+
+### Verificato
+- 64 test backend (anche su PostgreSQL, ripetuti 3 volte), 25 test frontend.
+- Prova nel browser (Chromium, schermo da telefono): scelta iniziale, feed personalizzato, tocco/doppio tocco/tieni premuto, voto mood e pagina mood, Non mi interessa (il brano non ricompare in 3 aperture), Nascondi artista, Altri brani così, storia 1080×1920, scoperta del giorno, desktop.
+
 ## 0.4.0 — Feed più vario (2026-11-03)
 ### Corretto (segnalazione: "si ripetono spesso le canzoni")
 - Memoria tra sessioni: i brani mostrati negli ultimi 3 giorni non tornano finché c'è altra musica; dal 4° al 14° giorno sono solo penalizzati. Vale per dispositivo (identificativo casuale) e per account.

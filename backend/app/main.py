@@ -7,7 +7,7 @@ from . import __version__, errors
 from .config import get_settings
 from .middleware import CsrfGuard, RateLimit, RequestContext
 from .jobs import background
-from .routers import auth, catalog, feed, internal, system
+from .routers import auth, catalog, feed, internal, personal, system
 
 API = "/api/v1"
 
@@ -28,7 +28,8 @@ def create_app() -> FastAPI:
     app = FastAPI(title="SONORA API", version=__version__, docs_url=f"{API}/docs", openapi_url=f"{API}/openapi.json",
                   lifespan=lifespan)
     errors.install(app)
-    app.add_middleware(RateLimit, rules={f"{API}/auth/login": (10, 300), f"{API}/auth/register": (5, 3600), f"{API}/feed/events": (240, 60)})
+    app.add_middleware(RateLimit, rules={f"{API}/auth/login": (10, 300), f"{API}/auth/register": (5, 3600), f"{API}/feed/events": (240, 60),
+                                    f"{API}/feed/feedback": (60, 60)})
     app.add_middleware(CsrfGuard)
     app.add_middleware(CORSMiddleware, allow_origins=[s.frontend_origin], allow_credentials=True,
                        allow_methods=["GET", "POST", "PATCH", "DELETE"],
@@ -39,6 +40,7 @@ def create_app() -> FastAPI:
     app.include_router(catalog.router, prefix=API)
     app.include_router(feed.router, prefix=API)
     app.include_router(internal.router, prefix=API)
+    app.include_router(personal.router, prefix=API)
     return app
 
 

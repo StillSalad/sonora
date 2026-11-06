@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { api, ApiError, type Meta, type User } from "../lib/api";
+import { syncPrefs } from "../lib/prefs";
 
 type BackendState = "checking" | "ok" | "waking" | "unreachable";
 type Theme = "dark" | "light";
@@ -66,6 +67,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   loadRef.current = load;
 
   useEffect(() => { void load(); }, [load]);
+  useEffect(() => { if (user) void syncPrefs(user); }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const on = () => { setOnline(true); void load(); };

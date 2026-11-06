@@ -11,7 +11,7 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from ..models import (Album, Artist, DuplicateCandidate, PopularityClass, Preview, PreviewStatus, Provider,
+from ..models import (Album, Artist, DuplicateCandidate, Like, PopularityClass, Preview, PreviewStatus, Provider,
                       ProviderAlbum, ProviderArtist, ProviderTrack, Tag, TagOrigin, Track, TrackArtist, TrackTag)
 from ..providers.base import ChartEntry, ExternalTrack
 from ..providers import itunes
@@ -146,7 +146,8 @@ def ingest_track(db: Session, ext: ExternalTrack) -> Track:
     return track
 
 
-def apply_charts(db: Session, tracks_by_ext: dict[str, Track], charts: list[ChartEntry], home: str = "it") -> None:
+def apply_charts(db: Session, tracks_by_ext: dict[str, Track], charts: list[ChartEntry], home: str = "it",
+                 configured: set[str] | None = None) -> None:
     """Segna come 'popular' le tracce presenti in almeno una classifica e azzera chi è uscito da tutte.
     Punteggio = posizione migliore; la classifica del paese dell'app pesa di più (1.0 contro 0.85).
     Ogni classifica resta in popularity_sources con paese, posizione e data."""
@@ -169,14 +170,21 @@ def apply_charts(db: Session, tracks_by_ext: dict[str, Track], charts: list[Char
                                  "rank": e.rank, "feed_updated": e.updated, "fetched_at": ts.isoformat()}
                                 for e in sorted(entries, key=lambda e: (not is_home(e), e.rank))]
         t.popularity_updated_at = ts
+    wanted = {c.upper() for c in (configured or {e.country for e in charts})}
+    liked = set(db.scalars(select(Like.track_id)).all())
     for t in db.scalars(select(Track).where(Track.popularity_class == PopularityClass.popular)):
         if t.id not in per_track:
+            old = {str(x.get("country", "")).upper() for x in (t.popularity_sources or []) if x.get("rank")}
             t.popularity_class = PopularityClass.unknown
             t.popularity_score = None
             t.popularity_confidence = None
             t.popularity_sources = [{"source": "apple_music_most_played", "note": "uscito dalle classifiche",
                                      "fetched_at": ts.isoformat()}]
             t.popularity_updated_at = ts
+            # arrivato solo da classifiche che non usiamo più (es. Francia tolta): non lo riproponiamo
+            # nemmeno come scoperta, a meno che qualcuno non lo abbia già messo tra i Mi piace
+            if old and not (old & wanted) and t.id not in liked:
+                t.hidden_reason = "chart_removed:" + ",".join(sorted(old))
 
 
 def apply_chart(db: Session, tracks_by_ext: dict[str, Track], chart: list[ChartEntry]) -> None:
